@@ -10,26 +10,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      # Step 1: Checkout your repo
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-    - name: SSH to VM and run Liquibase
-      uses: google-github-actions/ssh-compute@v1
-      with:
-        instance_name: liquibase-vm
-        zone: us-central1-a
-        project_id: hd-liquibase-v2
-        user: root
-        ssh_private_key: ${{ secrets.VM_SSH_KEY }}
-        command: |
-          mkdir -p /opt/liquibase-project
-          rm -rf /opt/liquibase-project/db
-          cp -r $GITHUB_WORKSPACE/db /opt/liquibase-project/db
-          cd /opt/liquibase-project
-          liquibase \
-            --url="jdbc:postgresql://10.0.0.3:5432/stage_db" \
-            --username=liquibase_user \
-            --password=${{ secrets.DB_PASSWORD }} \
-            --changelog-file=db/changelog-master.xml \
-            update
+      # Step 2: Authenticate to Google Cloud using Service Account
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Step 3: SSH into VM and Run Liquibase
+      - name: SSH to VM and run Liquibase
+        uses: google-github-actions/ssh-compute@v1
+        with:
+          instance_name: liquibase-vm
+          zone: us-central1-a
+          project_id: hd-liquibase-v2
+          user: root
+          ssh_private_key: ${{ secrets.VM_SSH_KEY }}
+          command: |
+            mkdir -p /opt/liquibase-project
+            rm -rf /opt/liquibase-project/db
+            cp -r $GITHUB_WORKSPACE/db /opt/liquibase-project/db
+            cd /opt/liquibase-project
+            liquibase \
+              --url="jdbc:postgresql://10.0.0.3:5432/stage_db" \
+              --username=liquibase_user \
+              --password=${{ secrets.DB_PASSWORD }} \
+              --changelog-file=db/changelog-master.xml \
+              update
 
